@@ -39,7 +39,7 @@ int main()
 		Console.PrintBox(0, 0, 70, 29, ' ', EBackgroundColor::DarkGray, EForegroundColor::Black);
 
 		Console.PrintBox(70, 0, 40, 29, ' ', EBackgroundColor::DarkGray, EForegroundColor::Black);
-		Console.PrintLog(70, 0, 40, 29);
+		Console.PrintCommandLog(70, 0, 40, 29);
 
 		Console.PrintChar(X, Y, '@');
 

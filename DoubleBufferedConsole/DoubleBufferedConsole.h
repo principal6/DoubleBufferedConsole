@@ -264,14 +264,14 @@ public:
 		SetConsoleCursorPosition(m_FrontBuffer, Coord);
 		memset(m_CommandBuffer, 0, KCommandBufferSize);
 		int ReadBytes{};
-		int CurrentLogIndex{ m_LogIndex };
+		int CurrentLogIndex{ m_CommandLogIndex };
 		while (true)
 		{
 			if (_kbhit())
 			{
-				bool should_read{ true };
-				int ch{ _getch() };
-				if (ch == 224)
+				bool ShouldRead{ true };
+				int Key{ _getch() };
+				if (Key == 224)
 				{
 					int arrow{ _getch() };
 					if (arrow == 72)
@@ -279,48 +279,48 @@ public:
 						memset(m_CommandBuffer, 0, KCommandBufferSize);
 
 						--CurrentLogIndex;
-						if (CurrentLogIndex < 0) CurrentLogIndex = KLogSize - 1;
+						if (CurrentLogIndex < 0) CurrentLogIndex = KCommandLogSize - 1;
 
-						memcpy(m_CommandBuffer, m_Log[CurrentLogIndex], strlen(m_Log[CurrentLogIndex]));
-						ReadBytes = strlen(m_CommandBuffer);
-						should_read = false;
+						memcpy(m_CommandBuffer, m_CommandLog[CurrentLogIndex], strlen(m_CommandLog[CurrentLogIndex]));
+						ReadBytes = (int)strlen(m_CommandBuffer);
+						ShouldRead = false;
 					}
 					else if (arrow == 80)
 					{
 						memset(m_CommandBuffer, 0, KCommandBufferSize);
 
 						++CurrentLogIndex;
-						if (CurrentLogIndex >= KLogSize) CurrentLogIndex = 0;
+						if (CurrentLogIndex >= KCommandLogSize) CurrentLogIndex = 0;
 
-						memcpy(m_CommandBuffer, m_Log[CurrentLogIndex], strlen(m_Log[CurrentLogIndex]));
-						ReadBytes = strlen(m_CommandBuffer);
-						should_read = false;
+						memcpy(m_CommandBuffer, m_CommandLog[CurrentLogIndex], strlen(m_CommandLog[CurrentLogIndex]));
+						ReadBytes = (int)strlen(m_CommandBuffer);
+						ShouldRead = false;
 					}
 					else
 					{
 						continue;
 					}
 				}
-				if (ch == VK_ESCAPE)
+				if (Key == VK_ESCAPE)
 				{
 					memset(m_CommandBuffer, 0, KCommandBufferSize);
 					ReadBytes = 0;
 					break;
 				}
-				if (ch == VK_RETURN) break;
-				if (ch == VK_BACK)
+				if (Key == VK_RETURN) break;
+				if (Key == VK_BACK)
 				{
 					if (ReadBytes)
 					{
 						--ReadBytes;
 						m_CommandBuffer[ReadBytes] = 0;
 					}
-					should_read = false;
+					ShouldRead = false;
 				}
 
-				if (should_read)
+				if (ShouldRead)
 				{
-					m_CommandBuffer[ReadBytes] = ch;
+					m_CommandBuffer[ReadBytes] = Key;
 					++ReadBytes;
 				}
 			}
@@ -336,9 +336,9 @@ public:
 		}
 		if (strlen(m_CommandBuffer))
 		{
-			strcpy_s(m_Log[m_LogIndex], m_CommandBuffer);
-			++m_LogIndex;
-			if (m_LogIndex >= KLogSize) m_LogIndex = 0;
+			strcpy_s(m_CommandLog[m_CommandLogIndex], m_CommandBuffer);
+			++m_CommandLogIndex;
+			if (m_CommandLogIndex >= KCommandLogSize) m_CommandLogIndex = 0;
 		}
 
 		return ReadBytes;
@@ -346,29 +346,29 @@ public:
 
 	const char* GetLastCommand()
 	{
-		int LastCommandIndex{ m_LogIndex - 1 };
-		if (LastCommandIndex < 0) LastCommandIndex += KLogSize;
-		return m_Log[LastCommandIndex];
+		int LastCommandIndex{ m_CommandLogIndex - 1 };
+		if (LastCommandIndex < 0) LastCommandIndex += KCommandLogSize;
+		return m_CommandLog[LastCommandIndex];
 	}
 
 	// Prints log bottom up
 	// X, Y, Width, Height are outer-box size
-	void PrintLog(short X, short Y, short Width, short Height)
+	void PrintCommandLog(short X, short Y, short Width, short Height)
 	{
 		X += 1;
 		Y += 1;
 		Width -= 2;
 		Height -= 2;
 
-		short _Height{ min(min(KLogSize, m_Height), Height) };
+		short _Height{ min(min(KCommandLogSize, m_Height), Height) };
 		for (short i = 0; i < _Height; ++i)
 		{
-			short CurrentLogIndex{ m_LogIndex - 1 - i };
-			if (CurrentLogIndex < 0) CurrentLogIndex += KLogSize;
+			short CurrentLogIndex{ m_CommandLogIndex - 1 - i };
+			if (CurrentLogIndex < 0) CurrentLogIndex += KCommandLogSize;
 			short _Y{ max(Y + _Height - i - 1, Y) };
 
-			PrintHString(X, _Y, m_Log[CurrentLogIndex], m_eClearBackground, EForegroundColor::LightYellow,
-				min(Width, (int)(strlen(m_Log[CurrentLogIndex]))));
+			PrintHString(X, _Y, m_CommandLog[CurrentLogIndex], m_eClearBackground, EForegroundColor::LightYellow,
+				min(Width, (int)(strlen(m_CommandLog[CurrentLogIndex]))));
 		}
 	}
 
@@ -415,10 +415,10 @@ private:
 
 private:
 	static constexpr short KCommandBufferSize{ 200 };
-	static constexpr short KLogSize{ 30 };
+	static constexpr short KCommandLogSize{ 30 };
 
 private:
 	char m_CommandBuffer[KCommandBufferSize]{};
-	char m_Log[KLogSize][KCommandBufferSize]{};
-	short m_LogIndex{};
+	char m_CommandLog[KCommandLogSize][KCommandBufferSize]{};
+	short m_CommandLogIndex{};
 };
