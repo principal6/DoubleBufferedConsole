@@ -1,5 +1,7 @@
 #include "DoubleBufferedConsole.h"
 #include <string>
+#include <thread>
+#include <atomic>
 
 int main()
 {
@@ -7,30 +9,44 @@ int main()
 	Console.SetClearBackground(EBackgroundColor::Black);
 	Console.SetDefaultForeground(EForegroundColor::LightYellow);
 
-	short X{}, Y{};
-	while (true)
-	{
-		if (Console.HitKey())
-		{
-			EArrowKeys ArrowKey{ Console.GetHitArrowKey() };
-			if (ArrowKey == EArrowKeys::Right) ++X;
-			if (ArrowKey == EArrowKeys::Left) --X;
-			if (ArrowKey == EArrowKeys::Down) ++Y;
-			if (ArrowKey == EArrowKeys::Up) --Y;
+	std::atomic<short> X{};
+	std::atomic<short> Y{};
 
-			int Key{ Console.GetHitKey() };
-			if (Key == VK_ESCAPE)
+	std::thread thr_input{
+		[&]()
+		{
+			while (true)
 			{
-				break;
-			}
-			else if (Key == VK_RETURN)
-			{
-				if (Console.GetCommand(0, 29))
+				if (Console.IsCleanedUp()) break;
+
+				if (Console.HitKey())
 				{
-					Console.GetLastCommand();
+					EArrowKeys ArrowKey{ Console.GetHitArrowKey() };
+					if (ArrowKey == EArrowKeys::Right) ++X;
+					if (ArrowKey == EArrowKeys::Left) --X;
+					if (ArrowKey == EArrowKeys::Down) ++Y;
+					if (ArrowKey == EArrowKeys::Up) --Y;
+
+					int Key{ Console.GetHitKey() };
+					if (Key == VK_ESCAPE)
+					{
+						Console.CleanUp();
+					}
+					else if (Key == VK_RETURN)
+					{
+						if (Console.GetCommand())
+						{
+							Console.GetLastCommand();
+						}
+					}
 				}
 			}
 		}
+	};
+
+	while (true)
+	{
+		if (Console.IsCleanedUp()) break;
 
 		Console.Clear();
 
@@ -40,6 +56,7 @@ int main()
 
 		Console.PrintBox(70, 0, 40, 29, ' ', EBackgroundColor::DarkGray, EForegroundColor::Black);
 		Console.PrintCommandLog(70, 0, 40, 29);
+		Console.PrintCommand(0, 29);
 
 		Console.PrintChar(X, Y, '@');
 
@@ -50,5 +67,8 @@ int main()
 
 		Console.Render();
 	}
+
+	thr_input.join();
+
 	return 0;
 }
