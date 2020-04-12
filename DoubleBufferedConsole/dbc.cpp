@@ -11,32 +11,27 @@ int main()
 
 	std::atomic<short> X{};
 	std::atomic<short> Y{};
-
-	std::thread thr_input{
+	std::thread ThrInput{
 		[&]()
 		{
 			while (true)
 			{
-				if (Console.IsCleanedUp()) break;
+				if (Console.IsTerminated()) break;
 
 				if (Console.HitKey())
 				{
-					EArrowKeys ArrowKey{ Console.GetHitArrowKey() };
-					if (ArrowKey == EArrowKeys::Right) ++X;
-					if (ArrowKey == EArrowKeys::Left) --X;
-					if (ArrowKey == EArrowKeys::Down) ++Y;
-					if (ArrowKey == EArrowKeys::Up) --Y;
-
-					int Key{ Console.GetHitKey() };
-					if (Key == VK_ESCAPE)
+					if (Console.IsHitKey(EArrowKeys::Right)) ++X;
+					else if (Console.IsHitKey(EArrowKeys::Left)) --X;
+					else if (Console.IsHitKey(EArrowKeys::Down)) ++Y;
+					else if (Console.IsHitKey(EArrowKeys::Up)) --Y;
+					else if (Console.IsHitKey(VK_RETURN))
 					{
-						Console.CleanUp();
-					}
-					else if (Key == VK_RETURN)
-					{
-						if (Console.GetCommand())
+						if (Console.ReadCommand())
 						{
-							Console.GetLastCommand();
+							if (Console.IsLastCommand("/quit"))
+							{
+								Console.Terminate();
+							}
 						}
 					}
 				}
@@ -46,7 +41,7 @@ int main()
 
 	while (true)
 	{
-		if (Console.IsCleanedUp()) break;
+		if (Console.IsTerminated()) break;
 
 		Console.Clear();
 
@@ -58,17 +53,16 @@ int main()
 		Console.PrintCommandLog(70, 0, 40, 29);
 		Console.PrintCommand(0, 29);
 
-		Console.PrintChar(X, Y, '@');
+		Console.PrintChar(X, Y, '@', EForegroundColor::LightYellow);
 
 		Console.PrintChar(112, 1, 'X');
 		Console.PrintChar(112, 2, 'Y');
-		Console.PrintHString(114, 1, std::to_string(X).c_str());
-		Console.PrintHString(114, 2, std::to_string(Y).c_str());
+		Console.PrintHString(114, 1, X);
+		Console.PrintHString(114, 2, Y);
 
 		Console.Render();
 	}
 
-	thr_input.join();
-
+	ThrInput.join();
 	return 0;
 }

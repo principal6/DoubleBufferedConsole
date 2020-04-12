@@ -61,8 +61,14 @@ enum class EForegroundColor
 class CDoubleBufferedConsole
 {
 public:
-	CDoubleBufferedConsole(short Width, short Height, const char* Title) : m_Width{ Width }, m_Height{ Height } { StartUp(Title); }
-	~CDoubleBufferedConsole() { CleanUp(); }
+	CDoubleBufferedConsole(short Width, short Height, const char* Title) : m_Width{ Width }, m_Height{ Height }
+	{ 
+		StartUp(Title);
+	}
+	~CDoubleBufferedConsole() 
+	{
+		CleanUp();
+	}
 
 public:
 	void Clear()
@@ -78,62 +84,84 @@ public:
 		}
 	}
 
-	void PrintChar(short X, short Y, char Char, EBackgroundColor eBackground, EForegroundColor eForeground)
+public:
+	void PrintChar(short X, short Y, char Char, WORD Attribute)
 	{
 		DWORD Written{};
 		COORD Coord{ X, Y };
-		WORD Attribute{ (WORD)((WORD)eBackground | (WORD)eForeground) };
 		FillConsoleOutputCharacterA(m_BackBuffer, Char, 1, Coord, &Written);
 		FillConsoleOutputAttribute(m_BackBuffer, Attribute, 1, Coord, &Written);
 	}
 
+	void PrintChar(short X, short Y, char Char, EBackgroundColor eBackground, EForegroundColor eForeground)
+	{
+		PrintChar(X, Y, Char, GetNewAttribute(eBackground, eForeground));
+	}
+
+	void PrintChar(short X, short Y, char Char, EBackgroundColor eBackground)
+	{
+		PrintChar(X, Y, Char, GetPatchedAttribute(X, Y, eBackground));
+	}
+
 	void PrintChar(short X, short Y, char Char, EForegroundColor eForeground)
 	{
-		PrintChar(X, Y, Char, m_eClearBackground, eForeground);
+		PrintChar(X, Y, Char, GetPatchedAttribute(X, Y, eForeground));
 	}
 
 	void PrintChar(short X, short Y, char Char)
 	{
-		PrintChar(X, Y, Char, m_eClearBackground, m_eDefaultForeground);
+		PrintChar(X, Y, Char, GetCurrentAttribute(X, Y));
 	}
 
-	void PrintHString(short X, short Y, const char* String, EBackgroundColor eBackground, EForegroundColor eForeground, int StringLength = -1)
+public:
+	void PrintHString(short X, short Y, const char* String, WORD Attribute, int StringLength = -1)
 	{
+		if (StringLength == -1) StringLength = (int)strlen(String);
+
 		DWORD Written{};
 		COORD Coord{ X, Y };
-		WORD Attribute{ (WORD)((WORD)eBackground | (WORD)eForeground) };
-		if (StringLength == -1) StringLength = (int)strlen(String);
 		WriteConsoleOutputCharacterA(m_BackBuffer, String, StringLength, Coord, &Written);
 		FillConsoleOutputAttribute(m_BackBuffer, Attribute, StringLength, Coord, &Written);
 	}
 
+	void PrintHString(short X, short Y, const char* String, EBackgroundColor eBackground, EForegroundColor eForeground, int StringLength = -1)
+	{
+		PrintHString(X, Y, String, GetNewAttribute(eBackground, eForeground), StringLength);
+	}
+
+	void PrintHString(short X, short Y, const char* String, EBackgroundColor eBackground, int StringLength = -1)
+	{
+		PrintHString(X, Y, String, GetPatchedAttribute(X, Y, eBackground), StringLength);
+	}
+
 	void PrintHString(short X, short Y, const char* String, EForegroundColor eForeground, int StringLength = -1)
 	{
-		PrintHString(X, Y, String, m_eClearBackground, eForeground, StringLength);
+		PrintHString(X, Y, String, GetPatchedAttribute(X, Y, eForeground), StringLength);
 	}
 
 	void PrintHString(short X, short Y, const char* String, int StringLength = -1)
 	{
-		PrintHString(X, Y, String, m_eDefaultForeground, StringLength);
+		PrintHString(X, Y, String, GetCurrentAttribute(X, Y), StringLength);
 	}
 
 	void PrintHString(short X, short Y, const std::string& String)
 	{
-		PrintHString(X, Y, String.c_str(), m_eDefaultForeground, (int)String.size());
+		PrintHString(X, Y, String.c_str(), (int)String.size());
 	}
 
 	void PrintHString(short X, short Y, short Short)
 	{
 		std::string String{ std::to_string((int)Short) };
-		PrintHString(X, Y, String.c_str(), m_eDefaultForeground, (int)String.size());
+		PrintHString(X, Y, String.c_str(), (int)String.size());
 	}
 
-	void PrintVString(short X, short Y, const char* String, EBackgroundColor eBackground, EForegroundColor eForeground, int StringLength = -1)
+public:
+	void PrintVString(short X, short Y, const char* String, WORD Attribute, int StringLength = -1)
 	{
+		if (StringLength == -1) StringLength = (int)strlen(String);
+
 		DWORD Written{};
 		COORD Coord{ X, Y };
-		WORD Attribute{ (WORD)((WORD)eBackground | (WORD)eForeground) };
-		if (StringLength == -1) StringLength = (int)strlen(String);
 		for (int i = 0; i < StringLength; ++i)
 		{
 			Coord.Y = Y + i;
@@ -142,16 +170,89 @@ public:
 		}
 	}
 
+	void PrintVString(short X, short Y, const char* String, EBackgroundColor eBackground, EForegroundColor eForeground, int StringLength = -1)
+	{
+		PrintVString(X, Y, String, GetNewAttribute(eBackground, eForeground), StringLength);
+	}
+
+	void PrintVString(short X, short Y, const char* String, EBackgroundColor eBackground, int StringLength = -1)
+	{
+		PrintVString(X, Y, String, GetPatchedAttribute(X, Y, eBackground), StringLength);
+	}
+
 	void PrintVString(short X, short Y, const char* String, EForegroundColor eForeground, int StringLength = -1)
 	{
-		PrintVString(X, Y, String, m_eClearBackground, eForeground, StringLength);
+		PrintVString(X, Y, String, GetPatchedAttribute(X, Y, eForeground), StringLength);
 	}
 
 	void PrintVString(short X, short Y, const char* String, int StringLength = -1)
 	{
-		PrintVString(X, Y, String, m_eDefaultForeground, StringLength);
+		PrintVString(X, Y, String, GetCurrentAttribute(X, Y), StringLength);
 	}
 
+public:
+	void FillHChar(short X, short Y, char Char, int Count, WORD Attribute)
+	{
+		DWORD Written{};
+		COORD Coord{ X, Y };
+		FillConsoleOutputCharacterA(m_BackBuffer, Char, Count, Coord, &Written);
+		FillConsoleOutputAttribute(m_BackBuffer, Attribute, Count, Coord, &Written);
+	}
+
+	void FillHChar(short X, short Y, char Char, int Count, EBackgroundColor eBackground, EForegroundColor eForeground)
+	{
+		FillHChar(X, Y, Char, Count, GetNewAttribute(eBackground, eForeground));
+	}
+
+	void FillHChar(short X, short Y, char Char, int Count, EBackgroundColor eBackground)
+	{
+		FillHChar(X, Y, Char, Count, GetPatchedAttribute(X, Y, eBackground));
+	}
+
+	void FillHChar(short X, short Y, char Char, int Count, EForegroundColor eForeground)
+	{
+		FillHChar(X, Y, Char, Count, GetPatchedAttribute(X, Y, eForeground));
+	}
+
+	void FillHChar(short X, short Y, char Char, int Count)
+	{
+		FillHChar(X, Y, Char, Count, GetCurrentAttribute(X, Y));
+	}
+
+public:
+	void FillVChar(short X, short Y, char Char, int Count, WORD Attribute)
+	{
+		DWORD Written{};
+		COORD Coord{ X, Y };
+		for (int i = 0; i < Count; ++i)
+		{
+			Coord.Y = Y + i;
+			FillConsoleOutputCharacterA(m_BackBuffer, Char, 1, Coord, &Written);
+			FillConsoleOutputAttribute(m_BackBuffer, Attribute, 1, Coord, &Written);
+		}
+	}
+
+	void FillVChar(short X, short Y, char Char, int Count, EBackgroundColor eBackground, EForegroundColor eForeground)
+	{
+		FillVChar(X, Y, Char, Count, GetNewAttribute(eBackground, eForeground));
+	}
+
+	void FillVChar(short X, short Y, char Char, int Count, EBackgroundColor eBackground)
+	{
+		FillVChar(X, Y, Char, Count, GetPatchedAttribute(X, Y, eBackground));
+	}
+
+	void FillVChar(short X, short Y, char Char, int Count, EForegroundColor eForeground)
+	{
+		FillVChar(X, Y, Char, Count, GetPatchedAttribute(X, Y, eForeground));
+	}
+
+	void FillVChar(short X, short Y, char Char, int Count)
+	{
+		FillVChar(X, Y, Char, Count, GetCurrentAttribute(X, Y));
+	}
+
+public:
 	void PrintBox(short X, short Y, short Width, short Height, char Char, EBackgroundColor eBackground, EForegroundColor eForeground)
 	{
 		FillHChar(X, Y, Char, Width, eBackground, eForeground);
@@ -168,48 +269,31 @@ public:
 		}
 	}
 
-	void FillHChar(short X, short Y, char Char, int Count, EBackgroundColor eBackground, EForegroundColor eForeground)
+private:
+	WORD GetCurrentAttribute(short X, short Y) const
 	{
-		DWORD Written{};
-		COORD Coord{ X, Y };
-		WORD Attribute{ (WORD)((WORD)eBackground | (WORD)eForeground) };
-		FillConsoleOutputCharacterA(m_BackBuffer, Char, Count, Coord, &Written);
-		FillConsoleOutputAttribute(m_BackBuffer, Attribute, Count, Coord, &Written);
+		WORD Attribute{};
+		DWORD Count{};
+		ReadConsoleOutputAttribute(m_BackBuffer, &Attribute, 1, COORD{ X, Y }, &Count);
+		return Attribute;
 	}
 
-	void FillHChar(short X, short Y, char Char, int Count, EForegroundColor eForeground)
+	WORD GetNewAttribute(EBackgroundColor eBackground, EForegroundColor eForeground) const
 	{
-		FillHChar(X, Y, Char, Count, m_eClearBackground, eForeground);
+		return (WORD)((WORD)eBackground | (WORD)eForeground);
 	}
 
-	void FillHChar(short X, short Y, char Char, int Count)
+	WORD GetPatchedAttribute(short X, short Y, EBackgroundColor eBackground) const
 	{
-		FillHChar(X, Y, Char, Count, m_eClearBackground, m_eDefaultForeground);
+		return (WORD)((GetCurrentAttribute(X, Y) & 0x000F) + (WORD)eBackground);
 	}
 
-	void FillVChar(short X, short Y, char Char, int Count, EBackgroundColor eBackground, EForegroundColor eForeground)
+	WORD GetPatchedAttribute(short X, short Y, EForegroundColor eForeground) const
 	{
-		DWORD Written{};
-		COORD Coord{ X, Y };
-		WORD Attribute{ (WORD)((WORD)eBackground | (WORD)eForeground) };
-		for (int i = 0; i < Count; ++i)
-		{
-			Coord.Y = Y + i;
-			FillConsoleOutputCharacterA(m_BackBuffer, Char, 1, Coord, &Written);
-			FillConsoleOutputAttribute(m_BackBuffer, Attribute, 1, Coord, &Written);
-		}
+		return (WORD)((GetCurrentAttribute(X, Y) & 0x00F0) + (WORD)eForeground);
 	}
 
-	void FillVChar(short X, short Y, char Char, int Count, EForegroundColor eForeground)
-	{
-		FillVChar(X, Y, Char, Count, m_eClearBackground, eForeground);
-	}
-
-	void FillVChar(short X, short Y, char Char, int Count)
-	{
-		FillVChar(X, Y, Char, Count, m_eClearBackground, m_eDefaultForeground);
-	}
-
+public:
 	void Render()
 	{
 		SetConsoleActiveScreenBuffer(m_BackBuffer);
@@ -239,36 +323,44 @@ public:
 		if (_kbhit())
 		{
 			m_HitKey = _getch();
+
+			if (m_HitKey == 224)
+			{
+				m_HitKey = 0;
+				int Key{ _getch() }; // arrow keys (up 72, left 75, right 77, down 80)
+				if (Key == 72) m_eHitArrowKey = EArrowKeys::Up;
+				else if (Key == 75) m_eHitArrowKey = EArrowKeys::Left;
+				else if (Key == 77) m_eHitArrowKey = EArrowKeys::Right;
+				else if (Key == 80) m_eHitArrowKey = EArrowKeys::Down;
+				else m_eHitArrowKey = EArrowKeys::None;
+			}
+			else
+			{
+				m_eHitArrowKey = EArrowKeys::None;
+			}
+
 			return true;
 		}
 		m_HitKey = 0;
 		return false;
 	}
 
-	int GetHitKey()
+	bool IsHitKey(int KeyCode) const
 	{
-		return m_HitKey;
+		return (m_HitKey == KeyCode);
 	}
 
-	EArrowKeys GetHitArrowKey()
+	bool IsHitKey(EArrowKeys ArrowKey) const
 	{
-		if (m_HitKey == 224)
-		{
-			m_HitKey = 0;
-			int Key{ _getch() }; // arrow keys (up 72, left 75, right 77, down 80)
-			if (Key == 72) return EArrowKeys::Up;
-			if (Key == 75) return EArrowKeys::Left;
-			if (Key == 77) return EArrowKeys::Right;
-			if (Key == 80) return EArrowKeys::Down;
-		}
-		return EArrowKeys::None;
+		return (m_eHitArrowKey == ArrowKey);
 	}
 
 public:
-	bool GetCommand()
+	bool IsReadingCommand() const { return m_bReadingCommand; }
+	bool ReadCommand()
 	{
 		// Initialize variables
-		m_GettingCommand = true;
+		m_bReadingCommand = true;
 		m_CommandReadBytes = 0; 
 		int CurrentLogIndex{ m_CommandLogIndex };
 		while (true)
@@ -309,7 +401,6 @@ public:
 				}
 				if (Key == VK_ESCAPE)
 				{
-					memset(m_CommandBuffer, 0, KCommandBufferSize);
 					m_CommandReadBytes = 0;
 					break;
 				}
@@ -321,8 +412,22 @@ public:
 				{
 					if (m_CommandReadBytes)
 					{
-						--m_CommandReadBytes;
-						m_CommandBuffer[m_CommandReadBytes] = 0;
+						if (m_CommandBuffer[m_CommandReadBytes - 1] < 0)
+						{
+							// Non-ASCII
+
+							m_CommandBuffer[m_CommandReadBytes - 2] = 0;
+							m_CommandBuffer[m_CommandReadBytes - 1] = 0;
+
+							m_CommandReadBytes -= 2;
+						}
+						else
+						{
+							// ASCII
+
+							--m_CommandReadBytes;
+							m_CommandBuffer[m_CommandReadBytes] = 0;
+						}
 					}
 					ShouldRead = false;
 				}
@@ -340,22 +445,35 @@ public:
 			if (ch == '\r') ch = 0;
 			if (ch == '\n') ch = 0;
 		}
-		if (strlen(m_CommandBuffer))
+		if (m_CommandReadBytes)
 		{
 			strcpy_s(m_CommandLog[m_CommandLogIndex], m_CommandBuffer);
 			++m_CommandLogIndex;
 			if (m_CommandLogIndex >= KCommandLogSize) m_CommandLogIndex = 0;
-			memset(m_CommandBuffer, 0, KCommandBufferSize); // Initialize
 		}
 
-		m_GettingCommand = false;
+		memset(m_CommandBuffer, 0, KCommandBufferSize); // Initialize
+		m_bReadingCommand = false;
 		return m_CommandReadBytes;
+	}
+
+	const char* GetLastCommand() const { return m_CommandLog[ (m_CommandLogIndex == 0) ? KCommandLogSize : m_CommandLogIndex - 1]; }
+
+	bool IsLastCommand(const char* Cmp) const
+	{
+		if (!Cmp) return false;
+		int Length{ (int)strlen(Cmp) };
+		if (strncmp(GetLastCommand(), Cmp, Length) == 0)
+		{
+			return true;
+		}
+		return false;
 	}
 
 	// Print the command currently being typed onto back-buffer
 	void PrintCommand(short X, short Y)
 	{
-		if (!m_GettingCommand) return;
+		if (!IsReadingCommand()) return;
 
 		COORD Coord{ X, Y };
 		DWORD Written{};
@@ -365,13 +483,11 @@ public:
 
 		WriteConsoleOutputCharacterA(m_BackBuffer, m_CommandBuffer, m_Width, Coord, &Written);
 		SetConsoleCursorPosition(m_BackBuffer, COORD{ (short)(Coord.X + m_CommandReadBytes), Y });
-	}
 
-	const char* GetLastCommand()
-	{
-		int LastCommandIndex{ m_CommandLogIndex - 1 };
-		if (LastCommandIndex < 0) LastCommandIndex += KCommandLogSize;
-		return m_CommandLog[LastCommandIndex];
+		short CommandBufferSize{ (short)strlen(m_CommandBuffer) };
+		wchar_t wsEnd[2]{ 0x25c4 };
+		Coord.X += CommandBufferSize;
+		WriteConsoleOutputCharacterW(m_BackBuffer, wsEnd, 1, Coord, &Written);
 	}
 
 	// Prints log bottom up
@@ -407,7 +523,7 @@ private:
 
 		Reset();
 
-		m_IsCleanedUp = false;
+		m_bRunning = true;
 	}
 
 	void Reset()
@@ -425,7 +541,6 @@ private:
 		SetConsoleCursorInfo(m_BackBuffer, &CursorInfo);
 	}
 
-public:
 	void CleanUp()
 	{
 		if (m_BackBuffer)
@@ -438,11 +553,18 @@ public:
 			CloseHandle(m_FrontBuffer);
 			m_FrontBuffer = nullptr;
 		}
-		m_IsCleanedUp = true;
 	}
-	bool IsCleanedUp() const { return m_IsCleanedUp; }
+
+public:
+	void Terminate() { m_bRunning = false; }
+	bool IsTerminated() const { return !m_bRunning; }
 
 private:
+	static constexpr short KCommandBufferSize{ 200 };
+	static constexpr short KCommandLogSize{ 30 };
+
+private:
+	bool m_bRunning{};
 	short m_Width{};
 	short m_Height{};
 	HANDLE m_FrontBuffer{};
@@ -454,18 +576,12 @@ private:
 
 private:
 	int m_HitKey{};
+	EArrowKeys m_eHitArrowKey{ EArrowKeys::None };
 
 private:
-	static constexpr short KCommandBufferSize{ 200 };
-	static constexpr short KCommandLogSize{ 30 };
-
-private:
+	bool m_bReadingCommand{};
 	char m_CommandBuffer[KCommandBufferSize]{};
+	short m_CommandReadBytes{};
 	char m_CommandLog[KCommandLogSize][KCommandBufferSize]{};
 	short m_CommandLogIndex{};
-	short m_CommandReadBytes{};
-	bool m_GettingCommand{};
-
-private:
-	bool m_IsCleanedUp{};
 };
